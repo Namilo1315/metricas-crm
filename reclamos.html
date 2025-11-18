@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<link rel="shortcut icon" href="img/logo.png" type="image/x-icon">
+<title>Reclamos 2025 – Tablero interactivo</title>
+
+<!-- Librerías -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+<style>
+:root{
+  --azul:#004b7f; --azul-2:#006aa3; --gris:#f5f7fa; --card:#fff; --borde:#e0e6ed;
+  --ok:#1a7f37; --warn:#bf8f00; --texto:#111;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--gris);color:var(--texto);font:14.5px/1.45 Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+.container{max-width:1320px;margin:auto;padding:22px 16px 40px}
+
+/* Header responsive */
+header{display:flex;align-items:center;gap:16px;margin-bottom:16px;flex-wrap:wrap}
+header img{height:60px;flex:0 0 auto}
+.header-main{display:flex;flex-direction:column;gap:6px;min-width:260px}
+h1{margin:0;color:var(--azul);font-size:26px;font-weight:800;line-height:1.15}
+.nav{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.btn{padding:8px 12px;border:1px solid var(--azul-2);background:#fff;color:var(--azul-2);
+  border-radius:10px;text-decoration:none;font-weight:700}
+.btn:hover,.btn.active{background:var(--azul-2);color:#fff}
+.upload{display:flex;gap:10px;align-items:center;margin-top:6px;flex-wrap:wrap}
+.help{font-size:12px;color:#444}
+@media (max-width:780px){
+  header{align-items:flex-start}
+  header img{height:48px}
+  h1{font-size:20px}
+  .nav{width:100%;margin-left:0}
+}
+
+/* Secciones */
+section h2{margin:20px 0 10px;color:var(--azul);font-size:20px;border-bottom:2px solid var(--azul-2);padding-bottom:6px}
+
+/* KPIs */
+.kpis{display:grid;gap:12px;grid-template-columns:repeat(5,minmax(140px,1fr))}
+.kpi{background:var(--card);border:1px solid var(--borde);border-radius:12px;padding:12px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.kpi small{display:block;color:#444}
+.kpi strong{font-size:20px;color:var(--texto)}
+@media (max-width:1024px){ .kpis{grid-template-columns:repeat(3,minmax(140px,1fr))} }
+@media (max-width:680px){ .kpis{grid-template-columns:repeat(2,minmax(140px,1fr))} }
+@media (max-width:420px){ .kpis{grid-template-columns:1fr} }
+
+/* Filtros */
+.filters{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0 14px}
+select, input[type="search"], button{padding:8px 10px;border-radius:10px;border:1px solid var(--borde);background:#fff;color:var(--texto)}
+button{cursor:pointer;font-weight:700;color:var(--azul-2)}
+button:hover{background:var(--azul-2);color:#fff;border-color:var(--azul-2)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{display:inline-flex;gap:8px;align-items:center;background:#eef5ff;color:#0b66c3;padding:6px 10px;border-radius:999px;font-weight:600;border:1px solid #cfe3ff}
+.chip .dotc{width:10px;height:10px;border-radius:3px;display:inline-block}
+
+/* Mensuales: 3 + 3 centrados, tarjetas un poco más anchas */
+.gridMonthly3{display:grid;gap:22px;grid-template-columns:repeat(3, 380px);justify-content:center}
+@media (max-width:1200px){ .gridMonthly3{grid-template-columns:repeat(2,380px)} }
+@media (max-width:780px){ .gridMonthly3{grid-template-columns:1fr} }
+
+/* Anuales centrados */
+.gridAnnual{display:grid;gap:22px;grid-template-columns:repeat(2, 560px);justify-content:center}
+@media (max-width:1200px){ .gridAnnual{grid-template-columns:1fr} }
+
+/* Cards */
+.card{background:var(--card);border:1px solid var(--borde);border-radius:12px;padding:12px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.card h3{margin:0 0 8px;text-align:center;color:var(--texto);font-size:16px}
+.card canvas{width:100%!important;height:360px!important}
+.card.small canvas{height:330px!important}
+
+/* Tabla */
+.table-wrap{background:var(--card);border:1px solid var(--borde);border-radius:12px;padding:0;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:auto;max-height:560px}
+table{width:100%;border-collapse:collapse;min-width:1100px}
+thead th{background:var(--azul-2);color:#fff;border-bottom:1px solid var(--azul-2);
+  padding:10px 6px;font-weight:700;text-align:center;position:sticky;top:0;z-index:1}
+tbody td,tbody th{border-bottom:1px solid var(--borde);padding:8px 6px;color:var(--texto)}
+tbody td{text-align:left}
+tbody tr:nth-child(odd){background:#fafcff}
+tbody tr:hover{background:#f2f6fb}
+.badge{padding:3px 7px;border-radius:999px;font-weight:700;font-size:12px}
+.badge.ok{background:#e6f4ea;color:var(--ok)}
+.badge.warn{background:#fff4d6;color:var(--warn)}
+.footer-note{color:#555;font-size:12px;margin:10px 6px}
+
+/* === Forzar escala global al 90% en todos los navegadores === */
+:root{ --zoom: .90; }
+
+/* Chrome / Edge / Opera */
+html { zoom: var(--zoom); }
+
+/* Firefox y otros que no soportan zoom */
+@supports not (zoom: 1) {
+  html, body { overflow-x: hidden; }
+  body {
+    transform: scale(var(--zoom));
+    transform-origin: top left;
+    width: calc(100% / var(--zoom));
+  }
+}
+
+/* (Opcional) canvas un poco más bajo */
+.card canvas { height: 300px !important; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <img src="img/logo.png" alt="Logo Maipú"/>
+    <div class="header-main">
+      <h1>Reclamos 2025 – Tablero interactivo</h1>
+      <div class="upload">
+        <input id="file" type="file" accept=".xlsx,.xls"/>
+        <span class="help">Cargá <b>reclamos2025.xlsx</b> (hoja <b>reclamos 2025</b>). Si está en la carpeta, se carga solo.</span>
+      </div>
+    </div>
+    <nav class="nav">
+      <a class="btn" href="index.html">Maipú</a>
+      <a class="btn" href="matias.html">Matías</a>
+      <a class="btn active" href="reclamos.html">Reclamos</a>
+      <a class="btn" href="crm.html">CRM</a>
+    </nav>
+  </header>
+
+  <!-- KPIs -->
+  <section class="kpis">
+    <div class="kpi"><small>Mes</small><strong id="kpi-mes">—</strong></div>
+    <div class="kpi"><small>Total mes</small><strong id="kpi-total">—</strong></div>
+    <div class="kpi"><small>Categoría</small><strong id="kpi-cat">Todas</strong></div>
+    <div class="kpi"><small>Área</small><strong id="kpi-area">Todas</strong></div>
+    <div class="kpi"><small>Zona/Cuenta</small><strong id="kpi-ubi">Todas</strong></div>
+  </section>
+
+  <!-- Filtros -->
+  <section>
+    <div class="filters">
+      <label>Mes:
+        <select id="sel-mes"></select>
+      </label>
+      <input id="search" type="search" placeholder="Buscar en tabla (categoría, área, zona, distrito, cuenta, estado, etc.)"/>
+      <button id="btn-clear-all">Limpiar filtros</button>
+      <button id="btn-csv">Exportar CSV</button>
+    </div>
+    <div class="chips" id="chips"></div>
+  </section>
+
+  <!-- MENSUALES: 3 arriba -->
+  <section>
+    <h2>Distribución mensual (interactiva)</h2>
+    <div class="gridMonthly3">
+      <div class="card small"><h3>Categoría – <span id="tMes1">—</span></h3><canvas id="donutCat"></canvas></div>
+      <div class="card small"><h3>Área – <span id="tMes2">—</span></h3><canvas id="donutArea"></canvas></div>
+      <div class="card small"><h3>Zona – <span id="tMes3">—</span></h3><canvas id="donutZona"></canvas></div>
+    </div>
+
+    <!-- MENSUALES: 3 abajo -->
+    <div class="gridMonthly3" style="margin-top:22px">
+      <div class="card small"><h3>Distrito – <span id="tMes4">—</span></h3><canvas id="donutDistrito"></canvas></div>
+      <div class="card small"><h3>Cuenta – <span id="tMes5">—</span></h3><canvas id="donutCuenta"></canvas></div>
+      <div class="card small">
+        <h3>Total de reclamos por mes</h3>
+        <canvas id="barTotals"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <!-- ANUALES -->
+  <section>
+    <h2>Evolución anual</h2>
+    <div class="gridAnnual">
+      <div class="card"><h3>Top categorías – serie anual</h3><canvas id="line"></canvas></div>
+      <div class="card small"><h3>Top anual de categorías (acumulado)</h3><canvas id="barTop"></canvas></div>
+    </div>
+  </section>
+
+  <!-- Detalle -->
+  <section>
+    <h2>Detalle de reclamos (ene–oct 2025)</h2>
+    <div class="table-wrap">
+      <table id="tbl">
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Tipo de pedido</th>
+            <th>Categoría</th>
+            <th>Área</th>
+            <th>Zona</th>
+            <th>Distrito</th>
+            <th>Cuenta</th>
+            <th>¿Tiene reclamo?</th>
+            <th>Derivado a</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p class="footer-note">Dirección de Comunicación. NL</p>
+  </section>
+</div>
+
+<script>
+/* ===== Config: archivo Excel predeterminado ===== */
+const DEFAULT_XLSX_URL = 'reclamos2025.xlsx';
+
+/* ====== Chart.js base ====== */
+Chart.defaults.color = '#111';
+Chart.defaults.font.size = 12;
+Chart.defaults.plugins.legend.position = 'right';
+Chart.defaults.plugins.legend.labels.color = '#111';
+Chart.defaults.plugins.legend.labels.boxWidth = 12;
+Chart.defaults.plugins.legend.labels.boxHeight = 12;
+Chart.defaults.plugins.legend.labels.padding = 12;
+Chart.defaults.plugins.legend.labels.font = { size: 12 };
+Chart.defaults.plugins.legend.labels.usePointStyle = true;
+Chart.defaults.elements.point.pointStyle = 'rect';
+Chart.defaults.elements.point.radius = 3;
+
+/* ====== Utils ====== */
+const MESES_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const MESES_1_10 = MESES_ES.slice(0,10);
+const MESES_CORTOS = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT'];
+
+const $ = id => document.getElementById(id);
+const kpiMes = $('kpi-mes'), kpiTot = $('kpi-total'),
+      kpiCat = $('kpi-cat'), kpiArea = $('kpi-area'), kpiUbi = $('kpi-ubi');
+
+const chipsDiv = $('chips');
+const selMes = $('sel-mes'), searchInput = $('search');
+
+function palette(i){
+  const base=['#1f77b4','#ff7f0e','#2ca02c','#d62728','#9467bd','#8c564b','#e377c2','#7f7f7f','#bcbd22','#17becf'];
+  return base[i%base.length];
+}
+const removeAccents = s => s.normalize('NFD').replace(/\p{Diacritic}/gu,'');
+function normTxt(s){
+  if(s==null) return '';
+  s = String(s).trim();
+  s = removeAccents(s).toLowerCase().replace(/[/_,\-]+/g,' ').replace(/\s+/g,' ').trim();
+  return s;
+}
+function titleCase(s){ return (s||'').toLowerCase().replace(/(^|\s)\S/g, t => t.toUpperCase()); }
+function fmt(n){ return (n||0).toLocaleString('es-AR'); }
+function hexToRgba(hex, a){
+  const h = hex.replace('#',''); const bigint = parseInt(h,16);
+  const r=(bigint>>16)&255, g=(bigint>>8)&255, b=(bigint)&255;
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+/* ====== Normalizadores ====== */
+const CAT_MAP = new Map(Object.entries({
+  'alumbrado':'alumbrado/luminaria','luminaria':'alumbrado/luminaria','alumbrado publico':'alumbrado/luminaria',
+  'bacheo':'bacheo/pavimento','pavimento':'bacheo/pavimento','pavimento bacheo':'bacheo/pavimento',
+  'limpieza de acequias':'acequias/limpieza','limpieza acequias':'acequias/limpieza','acequias':'acequias/limpieza',
+  'perros sueltos':'animales','animales sueltos':'animales',
+  'basura':'residuos/basura','residuos':'residuos/basura',
+  'cable caido':'cables/postes','poste caido':'cables/postes'
+}));
+function normCategoria(s){
+  let slug = normTxt(s || 'sin especificar');
+  if(CAT_MAP.has(slug)) slug = CAT_MAP.get(slug);
+  return titleCase(slug);
+}
+function normEstado(s){
+  const x = normTxt(s);
+  if(/resuelto|cerrado|finalizado/.test(x)) return 'Resuelto';
+  if(/pendiente|en tramite|en curso|derivado/.test(x)) return 'En trámite';
+  return s || '—';
+}
+function normZona(s){
+  const x = normTxt(s);
+  if(x.includes('sur')) return 'Zona Sur';
+  if(x.includes('este')) return 'Zona Este';
+  if(x.includes('centro')) return 'Zona Centro';
+  return '';
+}
+function normCuenta(s){
+  const x = normTxt(s);
+  if(/matias|stevan/.test(x)) return 'Matias';
+  if(/maipu|muni|municipio/.test(x)) return 'Muni';
+  return '';
+}
+
+/* ====== Estado global ====== */
+let RAW = [];
+let STATE = {
+  mes: 'Enero',
+  filtros: { categoria:null, area:null, zona:null, distrito:null, cuenta:null },
+  colors:  { categoria:null, area:null, zona:null, distrito:null, cuenta:null }
+};
+
+/* ====== Carga Excel genérica ====== */
+async function loadFromArrayBuffer(arrayBuffer, sourceLabel){
+  const wb = XLSX.read(arrayBuffer,{type:'array', cellDates:true});
+  const wsName = wb.SheetNames.find(n=>n.toLowerCase().includes('reclamo')) || wb.SheetNames[0];
+  const ws = wb.Sheets[wsName];
+  let rows = XLSX.utils.sheet_to_json(ws, {defval:''});
+
+  rows = rows.map(r=>{ const o={}; for(const k in r){ o[k.trim()] = r[k]; } return o; });
+
+  function parseFecha(v){
+    if(v instanceof Date) return v;
+    if(typeof v==='number'){
+      const d = XLSX.SSF.parse_date_code(v);
+      return new Date(d.y, d.m-1, d.d);
+    }
+    const d = new Date(v);
+    return isNaN(+d) ? null : d;
+  }
+
+  RAW = [];
+  for(const r of rows){
+    const fecha = parseFecha(r['Fecha']||r['FECHA']||r['fecha']); 
+    if(!fecha) continue;
+    const y = fecha.getFullYear(), m = fecha.getMonth()+1;
+    if(y!==2025 || m>10) continue;
+
+    const zonaN = normZona(r['Zona']);
+    const cuentaN = normCuenta(r['Cuenta']);
+
+    RAW.push({
+      'Fecha': fecha.toISOString().slice(0,10),
+      'Tipo de pedido': (r['Tipo de pedido']||'—').toString().trim(),
+      'Categoría': normCategoria(r['Especificación']||r['Categoria']||r['Categoría']),
+      'Área': (r['Área']||'—').toString().trim(),
+      'Zona': zonaN || '—',
+      'Distrito': (r['Distrito']||'—').toString().trim(),
+      'Cuenta': cuentaN || '—',
+      '¿Tiene reclamo?': (r['¿Tiene reclamo generado?']||r['Tiene reclamo']||'—').toString().trim(),
+      'Derivado a': (r['Derivado a']||'—').toString().trim(),
+      'Estado': normEstado(r['Estado'])
+    });
+  }
+
+  selMes.innerHTML='';
+  for(const mes of MESES_1_10){
+    const opt=document.createElement('option');
+    opt.value=mes; opt.textContent=mes;
+    selMes.appendChild(opt);
+  }
+  STATE.mes = MESES_1_10[0];
+  selMes.value = STATE.mes;
+
+  const help = document.querySelector('.help');
+  if(help && sourceLabel){
+    help.innerHTML = `Datos cargados desde <b>${sourceLabel}</b> (hoja <b>${wsName}</b>). Podés cargar otro archivo si querés.`;
+  }
+
+  updateAll();
+}
+
+/* Carga automática del Excel predeterminado */
+async function loadDefaultExcel(){
+  try{
+    const res = await fetch(DEFAULT_XLSX_URL);
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const buf = await res.arrayBuffer();
+    await loadFromArrayBuffer(buf, DEFAULT_XLSX_URL);
+  }catch(err){
+    console.error('No se pudo cargar el Excel predeterminado', err);
+    const help = document.querySelector('.help');
+    if(help){
+      help.innerHTML = `No se pudo cargar el archivo predeterminado <b>${DEFAULT_XLSX_URL}</b>. Cargá el Excel manualmente.`;
+    }
+  }
+}
+
+/* Carga manual vía input */
+$('file').addEventListener('change', async (e)=>{
+  const file = e.target.files[0]; if(!file) return;
+  const data = await file.arrayBuffer();
+  await loadFromArrayBuffer(data, file.name);
+});
+
+/* ====== Filtros y agrupaciones ====== */
+function rowsByMonth(mes){ return RAW.filter(r => MESES_ES[new Date(r.Fecha).getMonth()]===mes); }
+function applyCrossFilters(rows, exceptDim=null){
+  const f = STATE.filtros;
+  return rows.filter(r => (!f.categoria || exceptDim==='categoria' || r['Categoría']===f.categoria)
+                        && (!f.area      || exceptDim==='area'      || r['Área']===f.area)
+                        && (!f.zona      || exceptDim==='zona'      || r['Zona']===f.zona)
+                        && (!f.distrito  || exceptDim==='distrito'  || r['Distrito']===f.distrito)
+                        && (!f.cuenta    || exceptDim==='cuenta'    || r['Cuenta']===f.cuenta));
+}
+function groupCount(rows, key, opts={}){
+  const { dropNoSpec=false, dropOtros=false, onlyNormalized=false } = opts;
+  const map = new Map();
+  rows.forEach(r=>{
+    let v = r[key] || '';
+    const vn = normTxt(v);
+    if(dropNoSpec && (v==='' || v==='—' || vn==='sin especificar')) return;
+    if(dropOtros && vn.includes('otro')) return;
+    if(onlyNormalized && key==='Zona' && !['zona sur','zona este','zona centro'].includes(vn)) return;
+    if(onlyNormalized && key==='Cuenta' && !['muni','matias'].includes(vn)) return;
+    map.set(v, (map.get(v)||0)+1);
+  });
+  return Array.from(map.entries()).sort((a,b)=>b[1]-a[1]);
+}
+
+/* ====== Leyendas con números ====== */
+function legendAllSegmentsWithCounts(chart){
+  const labels = chart.data.labels || [];
+  const ds = chart.data.datasets?.[0] || {data:[], backgroundColor:[]};
+  const data = Array.from(ds.data || []);
+  const colors = Array.isArray(ds.backgroundColor) ? ds.backgroundColor : labels.map((_,i)=>ds.backgroundColor||'#888');
+
+  return labels.map((lab,i)=>({
+    text: `${lab} (${fmt(data[i]||0)})`,
+    fillStyle: colors[i],
+    strokeStyle: colors[i],
+    lineWidth: 1,
+    hidden: !isFinite(data[i]) || data[i]===null,
+    datasetIndex: 0,
+    index: i,
+    pointStyle: 'rect'
+  }));
+}
+
+/* ====== Charts ====== */
+let lineChart=null, barTopChart=null, donuts={}, barTotalsChart=null;
+
+const DIM_FROM_CANVAS = {
+  donutCat:'categoria', donutArea:'area', donutZona:'zona', donutDistrito:'distrito', donutCuenta:'cuenta'
+};
+
+/* Serie anual */
+function buildLineTop(){
+  if(!RAW.length) return;
+  const rf = applyCrossFilters(RAW);
+  const byCat = groupCount(rf, 'Categoría', {dropOtros:true, dropNoSpec:true});
+  const top = byCat.slice(0,6).map(([k])=>k);
+  const labels = MESES_1_10;
+  const datasets = top.map((cat,i)=>{
+    const data = labels.map(m => applyCrossFilters(rowsByMonth(m), null).filter(r => r['Categoría']===cat).length);
+    const c = palette(i);
+    return {label:cat, data, borderColor:c, backgroundColor:c, pointStyle:'rect', fill:false, tension:.25, pointRadius:3};
+  });
+
+  lineChart && lineChart.destroy();
+  lineChart = new Chart($('line').getContext('2d'),{
+    type:'line',
+    data:{labels, datasets},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{position:'top',
+        labels:{ usePointStyle:true, boxWidth:12, boxHeight:12, padding:10, font:{size:12},
+                 generateLabels: (ch)=> {
+                   const sums = ch.data.datasets.map(d => (d.data||[]).reduce((a,v)=>a+(+v||0),0));
+                   const base = Chart.defaults.plugins.legend.labels.generateLabels(ch);
+                   return base.map((it,i)=>({...it, text:`${it.text} (${fmt(sums[i]||0)})`, pointStyle:'rect'}));
+                 }}}},
+      scales:{y:{beginAtZero:true, ticks:{callback:v=>fmt(v)}}}
+    }
+  });
+
+  const labelsBar = byCat.slice(0,8).map(([k])=>k).reverse();
+  const valuesBar = byCat.slice(0,8).map(([,v])=>v).reverse();
+  barTopChart && barTopChart.destroy();
+  barTopChart = new Chart($('barTop').getContext('2d'),{
+    type:'bar',
+    data:{labels:labelsBar, datasets:[{label:'Total', data:valuesBar, backgroundColor:labelsBar.map((_,i)=>palette(i)), borderWidth:0}]},
+    options:{
+      responsive:true, maintainAspectRatio:false, indexAxis:'y',
+      plugins:{legend:{position:'top',
+        labels:{ usePointStyle:true, boxWidth:12, boxHeight:12, padding:10, font:{size:12},
+                 generateLabels:(ch)=>{
+                   const sums = ch.data.datasets.map(d => (d.data||[]).reduce((a,v)=>a+(+v||0),0));
+                   const base = Chart.defaults.plugins.legend.labels.generateLabels(ch);
+                   return base.map((it,i)=>({...it, text:`${it.text} (${fmt(sums[i]||0)})`, pointStyle:'rect'}));
+                 }}}},
+      scales:{x:{ticks:{callback:v=>fmt(v)}, beginAtZero:true}}
+    }
+  });
+}
+
+/* Totales por mes (sin leyenda) */
+function buildBarTotals(){
+  const labels = MESES_CORTOS;
+  const data = MESES_1_10.map(m => applyCrossFilters(rowsByMonth(m)).length);
+  barTotalsChart && barTotalsChart.destroy();
+  barTotalsChart = new Chart($('barTotals').getContext('2d'),{
+    type:'bar',
+    data:{labels, datasets:[{label:'Total', data, backgroundColor:labels.map((_,i)=>palette(i)), borderWidth:0, pointStyle:'rect'}]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{y:{beginAtZero:true, ticks:{callback:v=>fmt(v)}}}
+    }
+  });
+}
+
+/* Donuts – ahora clic en porción y también en la leyenda */
+function buildDonut(canvasId, rows, key, cfg={}, currentFilter=null){
+  let baseRows = rows;
+  if(currentFilter){ baseRows = applyCrossFilters(rowsByMonth(STATE.mes), null); }
+
+  const pairs = groupCount(baseRows, key, cfg);
+  const labels = pairs.map(([k])=>k);
+  const values = pairs.map(([,v])=>v);
+  const colors = values.map((_,i)=>palette(i));
+
+  donuts[canvasId] && donuts[canvasId].destroy();
+  const ctx = $(canvasId).getContext('2d');
+
+  donuts[canvasId] = new Chart(ctx,{
+    type:'doughnut',
+    data:{
+      labels,
+      datasets:[{
+        data:values,
+        backgroundColor:colors,
+        hoverOffset:8
+      }]
+    },
+    options:{
+      cutout:'56%',
+      radius:'98%',
+      plugins:{
+        legend:{
+          position:'right',
+          labels:{
+            usePointStyle:true,
+            boxWidth:12,
+            boxHeight:12,
+            padding:12,
+            font:{size:12},
+            generateLabels: legendAllSegmentsWithCounts
+          },
+          onClick:(e, legendItem, chart)=>{
+            const idx = legendItem.index;
+            const lbl = chart.data.labels[idx];
+            const ds = chart.data.datasets[0] || {};
+            const bg = ds.backgroundColor || [];
+            const color = Array.isArray(bg) ? bg[idx] : bg;
+            const dim = DIM_FROM_CANVAS[canvasId];
+            if(!dim) return;
+            if(STATE.filtros[dim] === lbl){
+              STATE.filtros[dim] = null;
+              STATE.colors[dim]  = null;
+            }else{
+              STATE.filtros[dim] = lbl;
+              STATE.colors[dim]  = color || '#0b66c3';
+            }
+            updateAll(false);
+          }
+        }
+      },
+      onClick:(evt, els)=>{
+        if(!els.length) return;
+        const idx = els[0].index;
+        const val = labels[idx];
+        const color = colors[idx];
+        const dim = DIM_FROM_CANVAS[canvasId];
+        if(!dim) return;
+        if(STATE.filtros[dim] === val){
+          STATE.filtros[dim] = null;
+          STATE.colors[dim]  = null;
+        }else{
+          STATE.filtros[dim] = val;
+          STATE.colors[dim]  = color;
+        }
+        updateAll(false);
+      },
+      onHover:(evt, elements)=>{
+        const canvas = evt?.native?.target;
+        if(canvas && canvas.style){
+          canvas.style.cursor = elements.length ? 'pointer' : 'default';
+        }
+      }
+    }
+  });
+}
+
+/* ====== Tabla y KPIs ====== */
+function currentRowsMonthly(){
+  let rows = rowsByMonth(STATE.mes);
+  rows = applyCrossFilters(rows);
+  const q = (searchInput.value||'').toLowerCase();
+  if(q){ rows = rows.filter(r => Object.values(r).some(v=>String(v).toLowerCase().includes(q))); }
+  return rows;
+}
+function renderTable(){
+  const tbody = $('tbl').querySelector('tbody');
+  tbody.innerHTML='';
+  for(const r of currentRowsMonthly()){
+    const est = (r['Estado']||'').toLowerCase();
+    const cls = (est.includes('resuelto')||est.includes('cerrado'))?'ok':'warn';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${r['Fecha']}</td>
+      <td>${r['Tipo de pedido']||'—'}</td>
+      <td>${r['Categoría']||'—'}</td>
+      <td>${r['Área']||'—'}</td>
+      <td>${r['Zona']||'—'}</td>
+      <td>${r['Distrito']||'—'}</td>
+      <td>${r['Cuenta']||'—'}</td>
+      <td>${r['¿Tiene reclamo?']||'—'}</td>
+      <td>${r['Derivado a']||'—'}</td>
+      <td><span class="badge ${cls}">${r['Estado']||'—'}</span></td>`;
+    tbody.appendChild(tr);
+  }
+}
+function renderKpis(){
+  kpiMes.textContent = STATE.mes;
+  kpiTot.textContent = fmt(currentRowsMonthly().length);
+  kpiCat.textContent = STATE.filtros.categoria || 'Todas';
+  kpiArea.textContent = STATE.filtros.area || 'Todas';
+  const ubiTxt = [STATE.filtros.zona, STATE.filtros.cuenta].filter(Boolean).join(' / ') || 'Todas';
+  kpiUbi.textContent = ubiTxt;
+}
+function renderChips(){
+  chipsDiv.innerHTML='';
+  const defs = [
+    ['categoria','Categoría'],
+    ['area','Área'],
+    ['zona','Zona'],
+    ['distrito','Distrito'],
+    ['cuenta','Cuenta']
+  ];
+  defs.forEach(([key,label])=>{
+    const val = STATE.filtros[key];
+    if(val){
+      const chip = document.createElement('span');
+      chip.className='chip';
+      const col = STATE.colors[key];
+      if(col){
+        chip.style.background = hexToRgba(col, .12);
+        chip.style.border = `1px solid ${hexToRgba(col,.35)}`;
+        chip.style.color = '#111';
+      }
+      const dot = document.createElement('span');
+      dot.className='dotc';
+      dot.style.background = col || '#0b66c3';
+      const txt = document.createElement('span');
+      txt.innerHTML = `${label}: <b>${val}</b>`;
+      const btn = document.createElement('button');
+      btn.setAttribute('aria-label','Quitar filtro');
+      btn.textContent = '×';
+      btn.style.border='0'; btn.style.background='transparent'; btn.style.cursor='pointer'; btn.style.fontWeight='800'; btn.style.color='inherit';
+      btn.onclick = ()=>{ STATE.filtros[key]=null; STATE.colors[key]=null; updateAll(); };
+      chip.appendChild(dot); chip.appendChild(txt); chip.appendChild(btn);
+      chipsDiv.appendChild(chip);
+    }
+  });
+}
+
+/* ====== Orquestador ====== */
+function updateAll(rebuildLine=true){
+  if(!RAW.length) return;
+  renderKpis();
+  renderChips();
+
+  const mes = STATE.mes;
+  $('tMes1').textContent = mes; $('tMes2').textContent = mes; $('tMes3').textContent = mes;
+  $('tMes4').textContent = mes; $('tMes5').textContent = mes;
+
+  const baseCat      = applyCrossFilters(rowsByMonth(mes), 'categoria');
+  const baseArea     = applyCrossFilters(rowsByMonth(mes), 'area');
+  const baseZona     = applyCrossFilters(rowsByMonth(mes), 'zona');
+  const baseDistrito = applyCrossFilters(rowsByMonth(mes), 'distrito');
+  const baseCuenta   = applyCrossFilters(rowsByMonth(mes), 'cuenta');
+
+  buildDonut('donutCat',      baseCat,      'Categoría', {dropNoSpec:true, dropOtros:true}, STATE.filtros.categoria);
+  buildDonut('donutArea',     baseArea,     'Área',       {dropNoSpec:true, dropOtros:true}, STATE.filtros.area);
+  buildDonut('donutZona',     baseZona,     'Zona',       {dropNoSpec:true, dropOtros:true, onlyNormalized:true}, STATE.filtros.zona);
+  buildDonut('donutDistrito', baseDistrito, 'Distrito',   {dropNoSpec:true, dropOtros:true}, STATE.filtros.distrito);
+  buildDonut('donutCuenta',   baseCuenta,   'Cuenta',     {dropNoSpec:true, dropOtros:true, onlyNormalized:true}, STATE.filtros.cuenta);
+
+  buildBarTotals();
+  renderTable();
+  if(rebuildLine) buildLineTop();
+}
+
+/* ====== Eventos ====== */
+selMes.addEventListener('change', ()=>{ STATE.mes = selMes.value; updateAll(); });
+$('btn-clear-all').addEventListener('click', ()=>{
+  STATE.filtros = {categoria:null,area:null,zona:null,distrito:null,cuenta:null};
+  STATE.colors  = {categoria:null,area:null,zona:null,distrito:null,cuenta:null};
+  updateAll();
+});
+searchInput.addEventListener('input', ()=> renderTable());
+$('btn-csv').addEventListener('click', ()=>{
+  const rows = currentRowsMonthly();
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Detalle');
+  XLSX.writeFile(wb, `reclamos_${STATE.mes.toLowerCase()}.csv`, {bookType:'csv'});
+});
+
+/* Cargar automáticamente el Excel predeterminado al abrir la página */
+loadDefaultExcel();
+</script>
+</body>
+</html>
