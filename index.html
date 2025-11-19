@@ -29,13 +29,35 @@
     .container{max-width:1200px;margin:auto;padding:22px 16px 40px}
 
     /* Header + nav */
-    header{display:flex;align-items:center;gap:16px;margin-bottom:16px;flex-wrap:wrap}
-    header img{height:68px}
-    header h1{margin:0;color:var(--azul);font-size:26px;font-weight:800;line-height:1.15}
-    .nav{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+    header{
+      display:flex;
+      align-items:center;
+      gap:16px;
+      margin-bottom:16px;
+      flex-wrap:wrap
+    }
+    header img{height:48px}
+    header h1{
+      margin:0;
+      color:var(--azul);
+      font-size:26px;
+      font-weight:800;
+      line-height:1.15
+    }
+    .nav{
+      margin-left:auto;
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap
+    }
     .btn{
-      padding:8px 12px;border:1px solid var(--azul-2);background:#fff;color:var(--azul-2);
-      border-radius:10px;text-decoration:none;font-weight:700
+      padding:8px 12px;
+      border:1px solid var(--azul-2);
+      background:#fff;
+      color:var(--azul-2);
+      border-radius:10px;
+      text-decoration:none;
+      font-weight:700
     }
     .btn:hover{background:var(--azul-2);color:#fff}
     .btn.active{background:var(--azul-2);color:#fff;pointer-events:none;opacity:.92}
@@ -352,7 +374,7 @@
 
     /* BREAKPOINTS */
     @media (max-width:1024px){
-      header img{height:56px}
+      header img{height:48px}
       header h1{font-size:24px}
       .card canvas{height:320px!important}
     }
@@ -363,6 +385,24 @@
       .btn{font-size:14px;padding:7px 10px}
     }
     @media (max-width:768px){
+      /* Header centrado en modo celular, igual que reclamos/CRM */
+      header{
+        flex-direction:column;
+        align-items:center;
+        text-align:center;
+      }
+      header img{
+        height:56px;
+      }
+      header h1{
+        font-size:20px;
+      }
+      .nav{
+        width:100%;
+        margin-left:0;
+        justify-content:center;
+      }
+
       .carousel-slide-inner{
         flex-direction:column;
       }
@@ -390,7 +430,7 @@
     }
     @media (max-width:520px){
       header h1{font-size:20px}
-      header img{height:50px}
+      header img{height:50px;}
       .card canvas{height:300px!important}
     }
 
@@ -424,14 +464,12 @@
   <div class="container">
     <header>
       <img src="img/logo.png" alt="Logo Maipú" />
-      <h1>Métricas de Comunicación 2025 – Maipú Municipio</h1>
+      <h1>Métricas 2025 – Maipú Municipio</h1>
       <nav class="nav">
         <a class="btn active" href="index.html">Maipú</a>
         <a class="btn" href="matias.html">Matías</a>
         <a class="btn" href="reclamos.html">Reclamos</a>
-         <a class="btn" href="crm.html">CRM</a>
-       
-
+        <a class="btn" href="crm.html">CRM</a>
       </nav>
     </header>
 
@@ -481,7 +519,7 @@
       </div>
     </section>
 
-    <!-- NUEVA SECCIÓN: Carrusel de eventos por red -->
+    <!-- SECCIÓN: Carrusel de eventos por red -->
     <section id="eventos-redes">
       <h2>Eventos destacados 2025</h2>
       <p class="section-subtitle">
@@ -812,7 +850,7 @@
           if(nextIndex < 0) nextIndex = slides.length - 1;
           if(nextIndex >= slides.length) nextIndex = 0;
           goTo(nextIndex);
-        }, 8000); // ambos carruseles cambian cada 8s hacia adelante
+        }, 8000);
       } else {
         if(prevBtn) prevBtn.style.display = 'none';
         if(nextBtn) nextBtn.style.display = 'none';
@@ -820,7 +858,7 @@
       }
     }
 
-    // Click global sobre las imágenes del carrusel para abrir el lightbox
+    // Click sobre imágenes del carrusel para abrir el lightbox
     document.addEventListener('click', (e)=>{
       if(e.target && e.target.matches('.carousel-img-box img')){
         const img = e.target;
@@ -829,9 +867,9 @@
       }
     });
 
-    // Ambos carruseles avanzan igual
     renderEventos('Facebook', eventosFacebook, 'carousel-facebook', 'dots-facebook', 1);
     renderEventos('Instagram', eventosInstagram, 'carousel-instagram', 'dots-instagram', 1);
   </script>
 </body>
 </html>
+

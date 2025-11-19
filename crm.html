@@ -8,7 +8,7 @@
 
   <!-- Fuente + Bootstrap para el grid del formulario -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <!-- Ahora incluye peso 800 para que el h1 se vea igual de grueso -->
+  <!-- Incluye peso 800 para que el h1 se vea igual que en el resto -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 
@@ -42,7 +42,7 @@
       padding:22px 16px 40px;
     }
 
-    /* Header + nav (igual que métricas, con CRM activo) */
+    /* Header + nav (alineado con reclamos) */
     header{
       display:flex;
       align-items:center;
@@ -50,14 +50,20 @@
       margin-bottom:16px;
       flex-wrap:wrap;
     }
-    header img{height:68px}
-    header h1{
+    header img{
+      height:48px;
+      flex:0 0 auto;
+    }
+
+    /* h1 igual que en reclamos (mismo grosor y estilo) */
+    h1{
       margin:0;
       color:var(--azul);
       font-size:26px;
-      font-weight:800;   /* mismo grosor que el resto */
+      font-weight:800;
       line-height:1.15;
-    } 
+    }
+
     .nav{
       margin-left:auto;
       display:flex;
@@ -82,6 +88,26 @@
       color:#fff;
       pointer-events:none;
       opacity:.92;
+    }
+
+    /* Modo celular: logo y título centrados, nav centrado (igual reclamos) */
+    @media (max-width:780px){
+      header{
+        flex-direction:column;
+        align-items:center;
+        text-align:center;
+      }
+      header img{
+        height:48px;
+      }
+      h1{
+        font-size:20px;
+      }
+      .nav{
+        width:100%;
+        margin-left:0;
+        justify-content:center;
+      }
     }
 
     /* Secciones */
@@ -158,8 +184,8 @@
     /* Botones del generador */
     .btn-base{
       border-radius:8px;
-      font-size:14px;
-      padding:9px 14px;
+      font-size:13px;
+      padding:8px 12px;
       border:1px solid var(--azul-2);
       background:#ffffff;
       color:var(--azul-2);
@@ -227,7 +253,14 @@
       background:#ffffff;
       display:block;
     }
-
+    header{
+      .btn{font-size:14px;padding:7px 10px}
+    }
+@media (max-width:860px){
+     
+      header{
+      .btn{font-size:14px;padding:7px 10px}
+    }
     @media (max-width:767.98px){
       #preview{
         height:520px;
@@ -251,12 +284,11 @@
         width: calc(100% / var(--zoom));
       }
     }
-    
   </style>
 </head>
 <body>
   <div class="container">
-    <!-- HEADER IGUAL QUE LA WEB DE MÉTRICAS, PERO CON CRM ACTIVO -->
+    <!-- HEADER IGUAL QUE EL RESTO, PERO CON CRM ACTIVO -->
     <header>
       <img src="img/logo.png" alt="Logo Maipú" />
       <h1>Generador HTML para CRM</h1>
@@ -329,7 +361,7 @@
             <div class="mt-2 d-flex flex-wrap gap-2">
               <button id="btnCopiar" class="btn-base btn-alt-green" type="button">Copiar HTML</button>
               <button id="btnDescargar" class="btn-base btn-alt-orange" type="button">Descargar</button>
-              <!-- NUEVO BOTÓN: limpia imágenes, HTML, preview, avisos -->
+              <!-- Botón que limpia todo -->
               <button id="btnReset" class="btn-base" type="button">Limpiar todo</button>
             </div>
           </div>
