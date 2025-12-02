@@ -81,10 +81,9 @@ h1{
   color:#444;
 }
 @media (max-width:860px){
-      
-      header{align-items:flex-start}
-      .btn{font-size:14px;padding:7px 10px}
-    }
+  header{align-items:flex-start}
+  .btn{font-size:14px;padding:7px 10px}
+}
 /* MODO CELULAR: logo centrado y header apilado */
 @media (max-width:780px){
   header{
@@ -100,7 +99,6 @@ h1{
   }
   h1{
     font-size:20px;
-    
   }
   .upload{
     justify-content:center;
@@ -405,7 +403,7 @@ html { zoom: var(--zoom); }
 
   <!-- Detalle -->
   <section>
-    <h2>Detalle de reclamos (ene–oct 2025)</h2>
+    <h2>Detalle de reclamos (ene–dic 2025)</h2>
     <div class="table-wrap">
       <table id="tbl">
         <thead>
@@ -448,8 +446,8 @@ Chart.defaults.elements.point.radius = 3;
 
 /* ====== Utils ====== */
 const MESES_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-const MESES_1_10 = MESES_ES.slice(0,10);
-const MESES_CORTOS = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT'];
+const MESES_1_10 = MESES_ES.slice(0,12); // ahora ene–dic
+const MESES_CORTOS = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
 
 const $ = id => document.getElementById(id);
 const kpiMes = $('kpi-mes'), kpiTot = $('kpi-total'),
@@ -527,6 +525,7 @@ async function loadFromArrayBuffer(arrayBuffer, sourceLabel){
   const ws = wb.Sheets[wsName];
   let rows = XLSX.utils.sheet_to_json(ws, {defval:''});
 
+  // normalizar encabezados (trim)
   rows = rows.map(r=>{ const o={}; for(const k in r){ o[k.trim()] = r[k]; } return o; });
 
   function parseFecha(v){
@@ -534,6 +533,23 @@ async function loadFromArrayBuffer(arrayBuffer, sourceLabel){
     if(typeof v==='number'){
       const d = XLSX.SSF.parse_date_code(v);
       return new Date(d.y, d.m-1, d.d);
+    }
+    if(typeof v==='string'){
+      const s = v.trim();
+      if(!s) return null;
+      let d = new Date(s);
+      if(!isNaN(+d)) return d;
+      // formato dd/mm/aaaa o dd-mm-aaaa
+      const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+      if(m){
+        let day = parseInt(m[1],10);
+        let month = parseInt(m[2],10);
+        let year = parseInt(m[3],10);
+        if(year < 100) year += 2000;
+        d = new Date(year, month-1, day);
+        if(!isNaN(+d)) return d;
+      }
+      return null;
     }
     const d = new Date(v);
     return isNaN(+d) ? null : d;
@@ -544,7 +560,8 @@ async function loadFromArrayBuffer(arrayBuffer, sourceLabel){
     const fecha = parseFecha(r['Fecha']||r['FECHA']||r['fecha']); 
     if(!fecha) continue;
     const y = fecha.getFullYear(), m = fecha.getMonth()+1;
-    if(y!==2025 || m>10) continue;
+    // ANTES: if(y!==2025 || m>10) continue;  // cortaba en octubre
+    if (y !== 2025) continue;                 // ahora toma todo 2025 (ene–dic)
 
     const zonaN = normZona(r['Zona']);
     const cuentaN = normCuenta(r['Cuenta']);
@@ -563,6 +580,7 @@ async function loadFromArrayBuffer(arrayBuffer, sourceLabel){
     });
   }
 
+  // Combo de meses (ahora ene–dic)
   selMes.innerHTML='';
   for(const mes of MESES_1_10){
     const opt=document.createElement('option');
